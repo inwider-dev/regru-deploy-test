@@ -1,0 +1,32 @@
+name: Инвентаризация REG.RU
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  inspect:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Подготовить SSH
+        env:
+          SSH_PRIVATE_KEY: ${{ secrets.REGRU_SSH_PRIVATE_KEY }}
+          SSH_HOST: ${{ secrets.REGRU_SSH_HOST }}
+        run: |
+          install -d -m 700 ~/.ssh
+          printf '%s\n' "$SSH_PRIVATE_KEY" > ~/.ssh/regru
+          chmod 600 ~/.ssh/regru
+          ssh-keyscan -H "$SSH_HOST" >> ~/.ssh/known_hosts
+          chmod 600 ~/.ssh/known_hosts
+
+      - name: Показать доступные каталоги сайтов
+        env:
+          SSH_HOST: ${{ secrets.REGRU_SSH_HOST }}
+          SSH_USER: ${{ secrets.REGRU_SSH_USER }}
+        run: |
+          ssh -i ~/.ssh/regru -o IdentitiesOnly=yes -o BatchMode=yes \
+            "$SSH_USER@$SSH_HOST" \
+            'set -e; printf "HOME=%s\n" "$HOME"; echo "SITE_DIRECTORIES"; if test -d "$HOME/data/www"; then find "$HOME/data/www" -mindepth 1 -maxdepth 2 -type d -print | sort; else echo "NO_DATA_WWW"; fi'
