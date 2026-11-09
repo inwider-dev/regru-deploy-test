@@ -1,0 +1,42 @@
+name: Предпросмотр в браузере
+
+on:
+  push:
+    branches:
+      - preview
+    paths:
+      - "src/**"
+      - ".github/workflows/pages-preview.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+concurrency:
+  group: github-pages-preview
+  cancel-in-progress: true
+
+jobs:
+  deploy:
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Получить файлы сайта
+        uses: actions/checkout@v5
+
+      - name: Настроить GitHub Pages
+        uses: actions/configure-pages@v5
+
+      - name: Подготовить файлы предпросмотра
+        uses: actions/upload-pages-artifact@v4
+        with:
+          path: src
+
+      - name: Опубликовать предпросмотр
+        id: deployment
+        uses: actions/deploy-pages@v5
