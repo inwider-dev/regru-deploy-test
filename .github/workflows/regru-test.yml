@@ -1,0 +1,45 @@
+name: Проверка подключения к REG.RU
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  test-connection:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Подготовить SSH
+        env:
+          SSH_PRIVATE_KEY: ${{ secrets.REGRU_SSH_PRIVATE_KEY }}
+          SSH_HOST: ${{ secrets.REGRU_SSH_HOST }}
+        run: |
+          install -d -m 700 ~/.ssh
+          printf '%s\n' "$SSH_PRIVATE_KEY" > ~/.ssh/regru
+          chmod 600 ~/.ssh/regru
+          ssh-keyscan -H "$SSH_HOST" >> ~/.ssh/known_hosts
+          chmod 600 ~/.ssh/known_hosts
+
+      - name: Проверить оболочку и запись
+        env:
+          SSH_HOST: ${{ secrets.REGRU_SSH_HOST }}
+          SSH_USER: ${{ secrets.REGRU_SSH_USER }}
+        run: |
+          ssh -i ~/.ssh/regru -o IdentitiesOnly=yes -o BatchMode=yes \
+            "$SSH_USER@$SSH_HOST" \
+            'set -e; echo CONNECTED; id; printf "PWD="; pwd; testfile="$HOME/.github_actions_access_test_$$"; printf "github-actions-ok\n" > "$testfile"; test "$(cat "$testfile")" = "github-actions-ok"; rm -f "$testfile"; echo WRITE_TEST_OK'
+
+      - name: Проверить передачу файла
+        env:
+          SSH_HOST: ${{ secrets.REGRU_SSH_HOST }}
+          SSH_USER: ${{ secrets.REGRU_SSH_USER }}
+        run: |
+          printf 'transfer-ok\n' > /tmp/regru-transfer-test.txt
+          scp -i ~/.ssh/regru -o IdentitiesOnly=yes -o BatchMode=yes \
+            /tmp/regru-transfer-test.txt \
+            "$SSH_USER@$SSH_HOST:.github_actions_transfer_test.txt"
+          ssh -i ~/.ssh/regru -o IdentitiesOnly=yes -o BatchMode=yes \
+            "$SSH_USER@$SSH_HOST" \
+            'set -e; test "$(cat "$HOME/.github_actions_transfer_test.txt")" = "transfer-ok"; rm -f "$HOME/.github_actions_transfer_test.txt"; echo TRANSFER_TEST_OK'
