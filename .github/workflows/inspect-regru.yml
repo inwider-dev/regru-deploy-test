@@ -29,4 +29,4 @@ jobs:
         run: |
           ssh -i ~/.ssh/regru -o IdentitiesOnly=yes -o BatchMode=yes \
             "$SSH_USER@$SSH_HOST" \
-            'set -e; printf "HOME=%s\n" "$HOME"; echo "SITE_DIRECTORIES"; if test -d "$HOME/data/www"; then find "$HOME/data/www" -mindepth 1 -maxdepth 2 -type d -print | sort; else echo "NO_DATA_WWW"; fi'
+            'set -e; printf "HOME=%s\n" "$HOME"; echo "DIRECTORIES"; find "$HOME" -mindepth 1 -maxdepth 2 -type d -print | sort'
